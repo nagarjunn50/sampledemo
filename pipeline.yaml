@@ -57,14 +57,3 @@ steps:
 - publish: $(Build.ArtifactStagingDirectory)
   artifact: $(artifactName)
   displayName: 'Publish Artifact'
-
-# Deployment (assuming Azure Blob Storage)
-- task: AzureFileCopy@4
-  inputs:
-    SourcePath: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
-    azureSubscription: '<Your-Azure-Subscription>'
-    Destination: 'AzureBlob'
-    storage: '<Your-Storage-Account-Name>'
-    containerName: '$web'
-    blobPrefix: 'app'
-  displayName: 'Deploy to Azure Blob Storage'
