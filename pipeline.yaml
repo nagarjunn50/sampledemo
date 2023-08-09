@@ -4,9 +4,9 @@ trigger:
 pool:
   name: Default
 
-
 variables:
-  buildVersion: '1.0.$(Build.BuildID)'
+  majorVersion: '1'
+  minorVersion: '0'
   artifactName: 'react-app-build'
   npm_config_cache: $(Pipeline.Workspace)/.npm
 
@@ -17,7 +17,6 @@ steps:
     versionSpec: '19.x'
     checkLatest: true
   displayName: 'Install Node.js'
-
 
 # Cache npm packages
 - task: Cache@2
@@ -41,6 +40,47 @@ steps:
 # Run tests (assuming you have some tests configured)
 - script: |
   displayName: 'Run tests'
+
+# Get the current patch version from the latest git tag
+- script: |
+    git fetch --tags
+    latestPatch=$(git describe --tags --match "$(majorVersion).$(minorVersion).*" --abbrev=0 | cut -d'.' -f3 | cut -d'-' -f1)
+    if [ -z "$latestPatch" ]; then
+      latestPatch=0
+    fi
+    newPatch=$((latestPatch + 1))
+    echo "##vso[task.setvariable variable=patchVersion;]$newPatch"
+  displayName: 'Fetch and increment patch version'
+  env:
+    majorVersion: $(majorVersion)
+    minorVersion: $(minorVersion)
+
+# Get the short commit hash
+- script: |
+    echo "##vso[task.setvariable variable=shortCommit;]$(git rev-parse --short HEAD)"
+  displayName: 'Get short commit hash'
+
+# Combine the version parts to form the simple version (without commit hash)
+- script: |
+    simpleVersion="$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION"
+    echo "Simple Version: $simpleVersion"
+    echo "##vso[task.setvariable variable=simpleVersion;]$simpleVersion"
+  displayName: 'Generate simple version'
+  env:
+    MAJOR_VERSION: $(majorVersion)
+    MINOR_VERSION: $(minorVersion)
+    PATCH_VERSION: $(patchVersion)
+
+# Update the build number with the simple version
+- script: |
+    echo "##vso[build.updatebuildnumber]$(simpleVersion)"
+  displayName: 'Update build number with simple version'
+
+# Tag the repo with the new version
+- script: |
+    git tag $(simpleVersion)
+    git push origin $(simpleVersion)
+  displayName: 'Tag and push new version'
 
 # Archive the build output (in the build folder)
 - task: ArchiveFiles@2
