@@ -28,21 +28,23 @@ steps:
   displayName: 'Cache NPM Packages'
 
 # Install app dependencies
-- script: |
+- bash: |
     npm ci
   displayName: 'Install dependencies'
 
 # Build the React app
-- script: |
+- bash: |
     npm run build
   displayName: 'Build React app'
 
 # Run tests (assuming you have some tests configured)
-- script: |
+- bash: |
+    # Your test command here, for example:
+    # npm test
   displayName: 'Run tests'
 
 # Get the current patch version from the latest git tag
-- script: |
+- bash: |
     git fetch --tags
     latestPatch=$(git describe --tags --match "$(majorVersion).$(minorVersion).*" --abbrev=0 | cut -d'.' -f3 | cut -d'-' -f1)
     if [ -z "$latestPatch" ]; then
@@ -55,13 +57,8 @@ steps:
     majorVersion: $(majorVersion)
     minorVersion: $(minorVersion)
 
-# Get the short commit hash
-- script: |
-    echo "##vso[task.setvariable variable=shortCommit;]$(git rev-parse --short HEAD)"
-  displayName: 'Get short commit hash'
-
-# Combine the version parts to form the simple version (without commit hash)
-- script: |
+# Combine the version parts to form the simple version
+- bash: |
     simpleVersion="$MAJOR_VERSION.$MINOR_VERSION.$PATCH_VERSION"
     echo "Simple Version: $simpleVersion"
     echo "##vso[task.setvariable variable=simpleVersion;]$simpleVersion"
@@ -72,12 +69,12 @@ steps:
     PATCH_VERSION: $(patchVersion)
 
 # Update the build number with the simple version
-- script: |
+- bash: |
     echo "##vso[build.updatebuildnumber]$(simpleVersion)"
   displayName: 'Update build number with simple version'
 
 # Tag the repo with the new version
-- script: |
+- bash: |
     git tag $(simpleVersion)
     git push origin $(simpleVersion)
   displayName: 'Tag and push new version'
