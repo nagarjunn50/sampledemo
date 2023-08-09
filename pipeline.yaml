@@ -1,0 +1,70 @@
+trigger:
+- main
+
+pool:
+  name: Default
+
+
+variables:
+  buildVersion: '1.0.$(Build.BuildID)'
+  artifactName: 'react-app-build'
+  npm_config_cache: $(Pipeline.Workspace)/.npm
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSource: 'spec'
+    versionSpec: '19.x'
+    checkLatest: true
+  displayName: 'Install Node.js'
+
+
+# Cache npm packages
+- task: Cache@2
+  inputs:
+    key: 'npm | "$(Agent.OS)" | package-lock.json'
+    restoreKeys: |
+      npm | "$(Agent.OS)"
+    path: $(npm_config_cache)
+  displayName: 'Cache NPM Packages'
+
+# Install app dependencies
+- script: |
+    npm ci
+  displayName: 'Install dependencies'
+
+# Build the React app
+- script: |
+    npm run build
+  displayName: 'Build React app'
+
+# Run tests (assuming you have some tests configured)
+- script: |
+    npm test
+  displayName: 'Run tests'
+
+# Archive the build output (in the build folder)
+- task: ArchiveFiles@2
+  inputs:
+    rootFolderOrFile: '$(System.DefaultWorkingDirectory)/build'
+    includeRootFolder: false
+    archiveType: 'zip'
+    archiveFile: $(Build.ArtifactStagingDirectory)/$(artifactName).zip
+    replaceExistingArchive: true
+  displayName: 'Archive files'
+
+# Publish the artifact for deployment
+- publish: $(Build.ArtifactStagingDirectory)
+  artifact: $(artifactName)
+  displayName: 'Publish Artifact'
+
+# Deployment (assuming Azure Blob Storage)
+- task: AzureFileCopy@4
+  inputs:
+    SourcePath: '$(Build.ArtifactStagingDirectory)/$(artifactName).zip'
+    azureSubscription: '<Your-Azure-Subscription>'
+    Destination: 'AzureBlob'
+    storage: '<Your-Storage-Account-Name>'
+    containerName: '$web'
+    blobPrefix: 'app'
+  displayName: 'Deploy to Azure Blob Storage'
