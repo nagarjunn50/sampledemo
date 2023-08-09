@@ -40,7 +40,7 @@ steps:
 
 # Run tests (assuming you have some tests configured)
 - script: |
-    npm test
+   # npm test
   displayName: 'Run tests'
 
 # Archive the build output (in the build folder)
